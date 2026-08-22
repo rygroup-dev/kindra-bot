@@ -1,0 +1,21 @@
+# secrets — never commit these
+.env
+wallets.json
+*.key
+
+# runtime state, logs, and the fetched game rule table
+data/
+node_modules/
+
+# local reverse-engineering workspace: HAR captures, vendored client source, protocol notes.
+# Deliberately not published.
+recon/
+dev/
+docs/
+*.har
+
+# editor / OS noise
+.DS_Store
+*.swp
+.idea/
+.vscode/

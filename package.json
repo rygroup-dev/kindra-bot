@@ -1,0 +1,25 @@
+{
+  "name": "kindra-bot",
+  "version": "0.1.0",
+  "description": "Headless automation bot for playkindra.com (3D skilling MMO on Robinhood Chain 4663) \u2014 gathering, combat, jobs, farming, market, on-chain $KINDRA cash-out, full Telegram control. RY GROUP.",
+  "type": "module",
+  "main": "tools/telegram-bot.js",
+  "scripts": {
+    "start": "node tools/telegram-bot.js",
+    "probe": "node tools/probe.js",
+    "auto": "node tools/orchestrator.js",
+    "rules": "node tools/fetch-rules.js",
+    "prestart": "node tools/fetch-rules.js --if-missing || true",
+    "test": "node tools/test-ui.js"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^9.1.0",
+    "socks-proxy-agent": "^10.1.0",
+    "viem": "^2.21.0",
+    "ws": "^8.18.0"
+  }
+}

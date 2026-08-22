@@ -1,0 +1,19 @@
+[Unit]
+Description=Kindra Bot — playkindra.com fleet automation (RY GROUP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/kindra-bot
+ExecStart=/usr/bin/env node tools/telegram-bot.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+# Telegram control comes back on its own after a crash or a reboot; the fleet is started from
+# the panel unless KINDRA_AUTOSTART=1 is set in .env.
+StandardOutput=append:/root/kindra-bot/data/service.log
+StandardError=append:/root/kindra-bot/data/service.log
+
+[Install]
+WantedBy=multi-user.target
