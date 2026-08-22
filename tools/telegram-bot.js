@@ -134,5 +134,13 @@ await tg.setCommands([
 ]);
 
 console.log(`[kindra] ${fleet.size} account(s) loaded. Telegram control starting…`);
-if (process.env.KINDRA_AUTOSTART === '1') fleet.startAll().catch((e) => console.error(e));
+// Come back up doing whatever we were doing. A deploy, a reboot or a crash otherwise leaves every
+// character parked until somebody notices and presses Start all again — which is exactly what
+// happened during this session's own restart.
+if (process.env.KINDRA_AUTOSTART === '0') {
+  console.log('[kindra] autostart disabled (KINDRA_AUTOSTART=0)');
+} else {
+  fleet.resume().then((r) => { if (r) console.log('[kindra] resumed previous run state'); })
+                .catch((e) => console.error('[kindra] resume failed:', e.message));
+}
 await tg.start();
