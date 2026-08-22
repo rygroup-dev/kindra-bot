@@ -62,7 +62,7 @@ function hydrate(bot) {
 
 const first = [...fleet.bots.values()][0];
 const SCREENS = [
-  ['home', []], ['help', []], ['fleet', []], ['newmenu', []], ['accounts', []], ['status', []],
+  ['home', []], ['help', []], ['fleet', []], ['newmenu', []], ['newclass', ['3']], ['newclass', ['10']], ['newpick', ['5']], ['accounts', []], ['status', []],
   ['acct', [first?.label]], ['caps', [first?.label]], ['bag', [first?.label]], ['quests', [first?.label]],
   ['skills', [first?.label]], ['where', [first?.label]], ['log', [first?.label]],
   ['upgrades', [first?.label]], ['boss', [first?.label]], ['jobs', [first?.label]], ['garden', [first?.label]], ['realms', [first?.label]],
