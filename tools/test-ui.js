@@ -65,7 +65,7 @@ const SCREENS = [
   ['home', []], ['help', []], ['fleet', []], ['newmenu', []], ['accounts', []], ['status', []],
   ['acct', [first?.label]], ['caps', [first?.label]], ['bag', [first?.label]], ['quests', [first?.label]],
   ['skills', [first?.label]], ['where', [first?.label]], ['log', [first?.label]],
-  ['upgrades', [first?.label]], ['boss', [first?.label]], ['jobs', [first?.label]], ['garden', [first?.label]],
+  ['upgrades', [first?.label]], ['boss', [first?.label]], ['jobs', [first?.label]], ['garden', [first?.label]], ['realms', [first?.label]],
 ];
 
 let fail = 0, checked = 0;
