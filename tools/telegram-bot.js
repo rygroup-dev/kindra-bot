@@ -15,7 +15,7 @@ const { CFG } = await import('../lib/config.js');
 const { Fleet } = await import('../lib/fleet.js');
 const { Telegram } = await import('../lib/telegram.js');
 const { buildRoutes } = await import('../lib/panels.js');
-const { E, SKILL_ICON, esc } = await import('../lib/ui.js');
+const { E, SKILL_ICON, esc, statusDot, activityLabel } = await import('../lib/ui.js');
 // Not imported from lib/rules.js on purpose: static imports are hoisted above ensureRules(), so
 // pulling the rule table in here would bypass the preflight and fail with ERR_MODULE_NOT_FOUND
 // instead of the instructions. It is a stable game constant.
@@ -53,6 +53,29 @@ function notify(key, text, { minGapMs = 60000 } = {}) {
 
 function wire(b) {
   const who = () => esc(b.state.me?.name || b.label);
+
+  // Progress you can watch. The bot works quietly for hours, and silence is indistinguishable from
+  // being stuck — so the events that mean "something moved" get reported even though none of them
+  // is urgent on its own.
+  b.on('log', (line) => {
+    const m = /\[(gather|combat|econ|orch|quest|upgrade|kgold)\]\s(.*)$/.exec(line);
+    if (!m) return;
+    const [, tag, rest] = m;
+
+    if (tag === 'upgrade' && /bought/.test(rest)) {
+      notify(`up:${b.label}:${rest.slice(0, 24)}`, `${E.shop} *${who()}* ${esc(rest)}`, { minGapMs: 0 });
+    }
+    if (tag === 'econ' && /filled a buy order/.test(rest)) {
+      notify(`bo:${b.label}:${Date.now()}`, `${E.sell} *${who()}* ${esc(rest)}`, { minGapMs: 0 });
+    }
+    if (tag === 'econ' && /vendor: /.test(rest)) {
+      notify(`sold:${b.label}`, `${E.sell} *${who()}* ${esc(rest)}`, { minGapMs: 900000 });
+    }
+    if (tag === 'orch' && /account Lv \d+ reached/.test(rest)) {
+      notify(`gate:${b.label}`, `🎯 *${who()}* ${esc(rest)}`, { minGapMs: 0 });
+    }
+    if (tag === 'quest' && /LEVELUP/.test(rest)) return;   // covered by the milestone handler
+  });
 
   // Skill milestones only — every level would be constant noise at low levels.
   b.on('levelup', (m) => {
@@ -104,6 +127,50 @@ function wire(b) {
 for (const b of fleet.bots.values()) wire(b);
 const origAdd = fleet.add.bind(fleet);
 fleet.add = (entry) => { const b = origAdd(entry); if (!b.__wired) { b.__wired = true; wire(b); } return b; };
+
+// --- pulse ---------------------------------------------------------------
+// One compact digest on a timer. Event notifications alone leave long silences during a normal
+// grind, and a chat that says nothing for two hours reads as a bot that died.
+const PULSE_MS = Number(process.env.KINDRA_PULSE_MIN || 25) * 60_000;
+let lastPulse = null;
+
+function pulse() {
+  const live = [...fleet.bots.values()].filter((x) => x.live);
+  if (!live.length) return;
+  const t = fleet.totals();
+  const prev = lastPulse;
+  lastPulse = { gold: t.gold, kills: t.kills, quests: t.quests, at: Date.now() };
+  if (!prev) return;   // first tick establishes the baseline
+
+  const mins = Math.max(1, (lastPulse.at - prev.at) / 60000);
+  const dGold = t.gold - prev.gold;
+  const lines = live.map((x) => {
+    const me = x.state.me;
+    return `${statusDot(x.status)} ${esc(me?.name || x.label).padEnd(12).slice(0, 12)} ${String(me?.gold ?? 0).padStart(6)}g  ${activityLabel(x.orch.current)}`;
+  });
+
+  const chasing = live.find((x) => x.orch.chasing);
+  tg.send([
+    `${E.brand} *${live.length} in the valley* · last ${Math.round(mins)}m`,
+    '```',
+    ...lines,
+    '```',
+    `${E.gold} ${dGold >= 0 ? '+' : ''}${dGold}g this window (${Math.round(dGold / mins * 60)}/h) · ${E.combat} +${t.kills - prev.kills} kills · ${E.quest} +${t.quests - prev.quests} quests`,
+    chasing ? `🎯 ${esc(chasing.state.me?.name || chasing.label)} chasing account Lv 10 — ${chasing.orch.chaseProgress().pct.toFixed(1)}%` : '',
+    fleet.shiftsOn ? `${E.clock} next shift in ${Math.round(fleet.nextShiftIn() / 60000)}m` : '',
+  ].filter(Boolean).join('\n')).catch(() => {});
+}
+setInterval(pulse, PULSE_MS);
+setTimeout(pulse, 30_000);   // establish the baseline shortly after startup
+
+// A shift change swaps the whole online set — worth saying, since the panel would otherwise show
+// three completely different characters with no explanation.
+const origShifts = fleet.startShifts.bind(fleet);
+fleet.startShifts = (opts) => {
+  const r = origShifts(opts);
+  notify('shifts:on', `${E.clock} Shift rotation on — swapping the online set every ${Math.round((opts?.everyMs || 45 * 60000) / 60000)} min.`, { minGapMs: 0 });
+  return r;
+};
 
 process.on('SIGINT', () => { fleet.disconnectAll(); tg.stop(); process.exit(0); });
 process.on('SIGTERM', () => { fleet.disconnectAll(); tg.stop(); process.exit(0); });
