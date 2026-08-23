@@ -51,5 +51,34 @@ console.log('\nthe pin still overrides the fleet:');
 ok(rate(true, true) === 0.25, 'a chasing character keeps normal pricing even with the fleet on gold');
 ok(rate(true, false) === 0.02, 'everyone else does not');
 
+// --- what it agrees to BUY ---------------------------------------------------
+// Earning faster is half of it. The shopping list offered the two worst buys in the shop and never
+// once offered the four best, in either mode.
+console.log('\nthe shopping list:');
+const { Fleet: F2 } = await import('../lib/fleet.js');
+const f3 = new F2({ onLog: () => {} });
+f3.load();
+const shopper = [...f3.bots.values()][1] || [...f3.bots.values()][0];
+if (shopper) {
+  shopper.state.me = {
+    id: 1, gold: 99999, satchel: 'worn_satchel', skills: { mining: 21000, woodcutting: 21000, foraging: 21000, fishing: 21000, combat: 12000 },
+    inv: {}, tools: {}, owned: { weapons: [], shields: [], hats: [], outfits: [], upgrades: [], pets: [], mounts: [], pieces: [] },
+    appearance: {}, haul: {},
+  };
+  shopper.upgrades.goldMode = false;
+  const normal = shopper.upgrades.plan().map((w) => w.id);
+  shopper.upgrades.goldMode = true;
+  const gold = shopper.upgrades.plan().map((w) => w.id);
+  console.log('  normal order:', normal.slice(0, 6).join(' → '));
+  console.log('  gold   order:', gold.slice(0, 6).join(' → '));
+  ok(gold.includes('miners_helmet'), 'the +12% find gadgets are offered at all now (they never were)');
+  ok(!gold.includes('naturalists_journal'), 'gold mode refuses the 3,500g xp-only journal');
+  ok(normal.includes('naturalists_journal'), 'normal mode still offers it — xp is worth something there');
+  const gi = gold.indexOf('miners_helmet'), si = gold.indexOf('shovel');
+  ok(si === -1 || gi < si, 'a 53-minute payback is bought before a four-day one');
+  const iron = gold.indexOf('iron_pick');
+  ok(iron >= 0 && iron < gi, 'and the 3-minute payback comes before both');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
