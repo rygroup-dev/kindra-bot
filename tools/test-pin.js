@@ -91,5 +91,22 @@ console.log('\nthe circuit survives a restart:');
   ok(f4._shiftCursor === 0, 'and a first-ever start still begins at wallet 1');
 }
 
+console.log('\nwallets added after boot:');
+{
+  const f5 = new Fleet({ onLog: () => {} });
+  f5.saveRunState = () => {};
+  f5.load();
+  const full = f5.bots.size;
+  if (full >= 2) {
+    const dropped = [...f5.bots.keys()].slice(-2);
+    for (const k of dropped) f5.bots.delete(k);
+    ok(f5.bots.size === full - 2, 'two accounts are missing from the running fleet');
+    const added = f5.syncBook();
+    ok(added === 2, 'syncBook finds exactly the two it did not know about');
+    ok(f5.bots.size === full, 'and the fleet is whole again');
+    ok(f5.syncBook() === 0, 'a second pass adds nothing — it is not re-adding what it already has');
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
