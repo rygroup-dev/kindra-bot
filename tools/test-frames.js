@@ -122,5 +122,25 @@ console.log('\n7. regen reaches our own health');
   ok(st.me.hp === 80, 'a frame with no number does not blank our health');
 }
 
+// --- 8. a creature that never drops must not be fought forever ---------------
+console.log('\n8. the fight gives up on a ghost');
+{
+  const { Combat } = await import('../lib/combat.js');
+  const net = new EventEmitter(), st = new GameState().attach(net);
+  net.emit('init', { you: { id: 1, x: 0, z: 0, hp: 100, skills: { combat: 30000 },
+    appearance: { weapon: 'iron_sword', shield: 'iron_shield', character: 'Knight' }, haul: {} } });
+  // A creature our world model still holds but the server has forgotten: full hp, never dies.
+  st.creatures.set(70, { id: 70, x: 0, z: 0, hp: 122, maxHp: 122, dead: false, kind: 'stalker', level: 17 });
+  const c = new Combat({ net: { on() {}, send() {} }, state: st,
+    move: { distanceTo: () => 0, heartbeat() {}, walkToward: async () => {}, stop() {} }, log: () => {} });
+  c.eatIfHurt = async () => false;
+  const t0 = Date.now();
+  const won = await c.fight(st.creatures.get(70));
+  const secs = (Date.now() - t0) / 1000;
+  ok(won === false, 'it does not claim a kill');
+  ok(secs < 60, `it gives up in ${secs.toFixed(0)}s rather than swinging the full 90`);
+  ok(!st.creatures.has(70), 'and drops the ghost, so the next cycle cannot pick it straight back');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
