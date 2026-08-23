@@ -18,7 +18,8 @@ function raider(label, { lvl = 17, rations = 8, bossCap = 5000 } = {}) {
                          realms: { reachable: () => true, current: () => null }, label, log: () => {} });
   b.myCombatLevel = () => lvl;
   return { label, live: true, state, bosses: b, crafting: b.crafting,
-           realms: { reachable: () => true }, orch: { capLeft: () => bossCap } };
+           realms: { reachable: () => true, current: () => null, entrance: () => null },
+           orch: { capLeft: () => bossCap, bestAlternative: 0 } };
 }
 
 const fleet = new Fleet({ onLog: () => {} });
@@ -89,6 +90,24 @@ console.log('\nafter the kill:');
   const after = fleet.syncRaid();
   ok(after !== live, 'a finished raid is retired, not marched to a second time');
   ok(logs.some((m) => /finished/.test(m)), 'and the log says finished, not stood down');
+}
+
+console.log('\nis it worth leaving the valley for?');
+{
+  const crew = [raider('a'), raider('b'), raider('c')];
+  use(crew);
+  const cheap = fleet.chooseRaid();
+  ok(!!cheap, `a raid is priced at ${Math.round(cheap.perMin)}g/min including the round trip`);
+
+  // Now give the crew something better to do. Nobody should be pulled off it.
+  for (const b of crew) b.orch.bestAlternative = 5000;
+  fleet.raid = null;
+  ok(fleet.chooseRaid() === null, 'no raid is called when the crew already earns more standing still');
+  ok(/already earning/.test(fleet.raidWhy || ''), `and it says why: ${fleet.raidWhy}`);
+
+  for (const b of crew) b.orch.bestAlternative = 0;
+  fleet.raid = null;
+  ok(fleet.chooseRaid() !== null, 'and it is called again once the alternative dries up');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
