@@ -58,5 +58,21 @@ fleet.pin('kindra-02');
 ok(fleet.unpin({ reason: 'released by hand' }).ok, 'it can also be released by hand');
 ok(!fleet.unpin().ok, 'unpinning nothing is refused, not silently ignored');
 
+console.log('\nwhose turn it is:');
+{
+  const f2 = new Fleet({ onLog: () => {} });
+  const roster = Array.from({ length: 24 }, (_, i) => ({ label: 'kindra-' + String(i + 1).padStart(2, '0') }));
+  const at = (c) => { f2._shiftCursor = c; return f2.byFairness(roster).slice(0, 3).map((b) => b.label); };
+  ok(at(0).join() === 'kindra-01,kindra-02,kindra-03', 'starts at wallet 1');
+  ok(at(2).join() === 'kindra-03,kindra-04,kindra-05', 'two slots filled moves it on by two');
+  ok(at(22).join() === 'kindra-23,kindra-24,kindra-01', 'wraps round the end of the book');
+  ok(at(24).join() === 'kindra-01,kindra-02,kindra-03', 'a full circuit returns to wallet 1');
+  ok(at(-2).join() === 'kindra-23,kindra-24,kindra-01', 'a negative cursor does not fall off the front');
+  // Order must come from the wallet number, not string sort: kindra-2 must not land before kindra-10.
+  const mixed = [{ label: 'kindra-10' }, { label: 'kindra-2' }, { label: 'kindra-1' }];
+  f2._shiftCursor = 0;
+  ok(f2.byFairness(mixed).map((b) => b.label).join() === 'kindra-1,kindra-2,kindra-10', 'sorts by number, not by text');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
