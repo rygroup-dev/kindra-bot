@@ -80,5 +80,24 @@ if (shopper) {
   ok(iron >= 0 && iron < gi, 'and the 3-minute payback comes before both');
 }
 
+// --- the uncapped channels --------------------------------------------------
+// Five things carry a daily gold cap: vendor, gathering, combat, boss and kart. The PLAYER market
+// carries none. So "gold mode is pointless because of the caps" is only true while the bot leans
+// on the vendor, and it was leaning on the vendor.
+console.log('\nthe channels:');
+const { MARKET, VENDOR, BOSSES } = await import('../lib/rules.js');
+ok(!Object.keys(MARKET).some((k) => /dailycap/i.test(k)), 'the player market has no daily gold cap');
+ok(VENDOR.dailyGoldCap === 1000, 'the vendor does, at 1000');
+ok(MARKET.maxPerPlayer === 30, `and allows ${MARKET.maxPerPlayer} listings a head`);
+ok(Math.max(8, MARKET.maxPerPlayer - 6) > 8, 'so the listing budget opens up once the vendor shuts');
+
+console.log('\nboss purses, priced from the table:');
+const purse = (id) => { const r = BOSSES[id]?.reward?.goldRoll; return r ? (r[0] + r[1]) / 2 : 0; };
+for (const id of ['warden', 'gloamroot', 'drowned_king', 'rimewyrm', 'umbrax']) {
+  console.log(`  ${id.padEnd(14)} ${purse(id)}g`);
+}
+ok(purse('warden') === 0 && purse('gloamroot') === 0, 'the two a lone character can join pay nothing');
+ok(purse('rimewyrm') === 240 && purse('umbrax') === 1100, 'and the ones that pay are priced from their own roll');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
