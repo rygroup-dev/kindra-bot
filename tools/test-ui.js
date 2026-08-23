@@ -108,6 +108,19 @@ await pass('offline: no character joined yet');
 if (first) { hydrate(first); await pass('live: character mid-session'); }
 else console.log('\n(no accounts in wallets.json — live pass skipped)');
 
+// An account that is off-shift still has to show a balance, or the roster answers "is every
+// account gaining?" with a column of dashes for the twenty-one that are not in play right now.
+if (first) {
+  const off = [...fleet.bots.values()].find((b) => !b.state.me);
+  if (off) {
+    fleet._runStateCache = { at: Date.now(), v: { gold: { [off.label]: 1234 } } };
+    const row = (await ROUTES.home()).text;
+    if (row.includes('~1234')) console.log('✓ off-shift accounts show their last known balance');
+    else { console.log('❌ an off-shift account rendered no balance'); fail++; }
+    fleet._runStateCache = null;
+  }
+}
+
 console.log(`\n${checked} buttons verified`);
 console.log(fail === 0 ? '✅ UI consistent — no dead buttons, no broken markdown, no placeholder values'
                        : `❌ ${fail} problem(s)`);
