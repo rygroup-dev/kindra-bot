@@ -142,5 +142,22 @@ console.log('\n8. the fight gives up on a ghost');
   ok(!st.creatures.has(70), 'and drops the ghost, so the next cycle cannot pick it straight back');
 }
 
+// --- 9. the xp a kill pays must reach our skills ------------------------------
+console.log('\n9. reward xp lands on the skill it names');
+{
+  const net = new EventEmitter(), st = new GameState().attach(net);
+  net.emit('init', { you: { id: 1, x: 0, z: 0, haul: {}, skills: { combat: 1000, mining: 500 } } });
+  net.emit('reward', { t: 'reward', skill: 'combat', xp: 94, gold: 12 });
+  ok(st.me.skills.combat === 1094, 'a kill\'s xp is added (1000 + 94)');
+  ok(st.me.skills.mining === 500, 'and nothing else is disturbed');
+  net.emit('reward', { t: 'reward', skill: 'combat', xp: 94 });
+  ok(st.me.skills.combat === 1188, 'it accumulates across kills');
+  // `inv` carries the server's authoritative totals and must win, so drift cannot build up.
+  net.emit('inv', { t: 'inv', skills: { combat: 1200, mining: 500 } });
+  ok(st.me.skills.combat === 1200, 'an inv frame overwrites with the server truth');
+  net.emit('reward', { t: 'reward', gold: 5 });
+  ok(st.me.skills.combat === 1200, 'a reward with no xp changes nothing');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
