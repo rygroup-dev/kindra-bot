@@ -106,5 +106,21 @@ console.log('\n6. teleport is the one frame allowed to move us');
   ok(st.me.x === 0 && st.me.z === 560, 'a frame with no coordinates is ignored, not applied');
 }
 
+// --- 7. the hp frame is out-of-combat regen, and it is only about us ---------
+console.log('\n7. regen reaches our own health');
+{
+  const net = new EventEmitter(), st = new GameState().attach(net);
+  net.emit('init', { you: { id: 7, x: 0, z: 0, hp: 51, haul: {} } });
+  ok(st.me.hp === 51, 'hurt at 51');
+  net.emit('hp', { t: 'hp', hp: 63 });                 // the real shape: no id at all
+  ok(st.me.hp === 63, 'a regen tick with no id is ours, and lands');
+  net.emit('hp', { t: 'hp', id: 7, hp: 80 });
+  ok(st.me.hp === 80, 'one addressed to us lands too');
+  net.emit('hp', { t: 'hp', id: 99, hp: 4 });
+  ok(st.me.hp === 80, 'and one about somebody else is ignored');
+  net.emit('hp', { t: 'hp' });
+  ok(st.me.hp === 80, 'a frame with no number does not blank our health');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
