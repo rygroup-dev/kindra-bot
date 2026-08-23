@@ -67,9 +67,24 @@ NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 ok "✓ node $(node -v), git $(git --version | awk '{print $3}')"
 
 # ---------------------------------------------------------------------- source
+FRESH=1
 if [ -d "$DIR/.git" ]; then
-  info "→ updating $DIR"
-  git -C "$DIR" pull --ff-only >/dev/null 2>&1 || warn "  (couldn't fast-forward; keeping what's there)"
+  FRESH=0
+  info "→ existing install found — updating the source only"
+  info "  (your wallets.json, .env and character progress are left untouched)"
+  WAS="$(git -C "$DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  if git -C "$DIR" pull --ff-only >/dev/null 2>&1; then
+    NOW="$(git -C "$DIR" rev-parse --short HEAD)"
+    if [ "$WAS" = "$NOW" ]; then ok "✓ already on the latest source ($NOW)"
+    else ok "✓ updated $WAS → $NOW"; fi
+  else
+    # NOT a warning to skim past. A failed pull means the friend keeps running old code while this
+    # script goes on to report success — the install-time version of looking healthy and doing
+    # nothing. Say what they are actually on.
+    warn "  ⚠  COULD NOT UPDATE — still on $WAS"
+    warn "     Local edits or a diverged branch. Run: git -C $DIR status"
+    warn "     Everything below applies to the OLD code."
+  fi
 else
   info "→ cloning into $DIR"
   git clone --depth 1 "$REPO" "$DIR" >/dev/null 2>&1 || die "Clone failed — is $REPO reachable?"
@@ -82,8 +97,10 @@ ok "✓ dependencies ready"
 
 # Kindra publishes its own balance table (shared.js is imported by its client AND its server), so
 # the bot reads the live rules instead of shipping a copy that goes stale on the next patch.
+# On an UPDATE, re-fetch rather than skip: the table is not vendored precisely so it follows the
+# game's own patches, and --if-missing would keep whatever was downloaded on install day forever.
 info "→ fetching the game's rule table"
-node tools/fetch-rules.js --if-missing
+if [ "$FRESH" = "1" ]; then node tools/fetch-rules.js --if-missing; else node tools/fetch-rules.js; fi
 ok "✓ game rules ready"
 
 # -------------------------------------------------------------- telegram token
@@ -199,8 +216,17 @@ if command -v systemctl >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
     kindra-bot.service > /etc/systemd/system/kindra-bot.service
   mkdir -p "$DIR/data"
   systemctl daemon-reload
-  systemctl enable --now kindra-bot.service >/dev/null 2>&1
-  ok "✓ systemd service 'kindra-bot' installed and running"
+  systemctl enable kindra-bot.service >/dev/null 2>&1
+  # RESTART, not just start. `enable --now` leaves an already-running service on the code it
+  # started with, so an update would pull new source and change nothing at all until the next
+  # reboot — while this script cheerfully reported success.
+  systemctl restart kindra-bot.service >/dev/null 2>&1
+  sleep 2
+  if systemctl is-active --quiet kindra-bot.service; then
+    ok "✓ systemd service 'kindra-bot' running the new code"
+  else
+    warn "  ⚠  service did not come back up — journalctl -u kindra-bot -n 50"
+  fi
   info "   logs:  journalctl -u kindra-bot -f"
 else
   warn "→ no systemd (or not root). Start it yourself:"
