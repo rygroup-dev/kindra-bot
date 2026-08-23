@@ -70,13 +70,17 @@ const SCREENS = [
   ['upgrades', [first?.label]], ['boss', [first?.label]], ['jobs', [first?.label]], ['garden', [first?.label]], ['realms', [first?.label]],
 ];
 
-let fail = 0, checked = 0;
+let fail = 0, checked = 0, skipped = 0;
 
 async function pass(name) {
   console.log(`\n── ${name} ──`);
   for (const [route, args] of SCREENS) {
     const fn = ROUTES[route];
     if (!fn) { console.log(`✗ ${route}: no such route`); fail++; continue; }
+    // A per-character panel needs a character. On a fresh clone there is no wallets.json yet, and
+    // reporting twelve "failures" for panels that correctly refuse to render tells someone who has
+    // just installed the bot that it is broken when it is doing exactly the right thing.
+    if (args.length && args[0] === undefined) { skipped++; continue; }
     let out;
     try { out = await fn(args); }
     catch (e) { console.log(`✗ ${route}: threw ${e.message}`); fail++; continue; }
@@ -123,7 +127,7 @@ if (first) {
   }
 }
 
-console.log(`\n${checked} buttons verified`);
+console.log(`\n${checked} buttons verified${skipped ? ` · ${skipped} per-character panel(s) skipped: no accounts in wallets.json yet` : ''}`);
 console.log(fail === 0 ? '✅ UI consistent — no dead buttons, no broken markdown, no placeholder values'
                        : `❌ ${fail} problem(s)`);
 process.exit(fail === 0 ? 0 : 1);
