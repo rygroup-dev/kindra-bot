@@ -177,6 +177,10 @@ process.on('SIGTERM', () => { fleet.disconnectAll(); tg.stop(); process.exit(0);
 
 // The ☰ menu next to the text box. Without registering these the user has to know to type /start
 // before anything at all appears.
+//
+// NEVER fatal. This is a cosmetic registration, but it was a bare top-level await: one connect
+// timeout to api.telegram.org took the whole process down before a single character joined, and
+// systemd restarted it into the same timeout four times over. A menu is not worth 24 accounts.
 await tg.setCommands([
   ['start', '🌿 open the control panel'],
   ['status', '📊 fleet overview'],
@@ -198,7 +202,7 @@ await tg.setCommands([
   ['sell', '🧺 liquidate now'],
   ['log', '📓 recent activity'],
   ['help', '❓ every command'],
-]);
+]).catch((e) => console.error('[kindra] could not register the ☰ menu (carrying on):', e.message));
 
 console.log(`[kindra] ${fleet.size} account(s) loaded. Telegram control starting…`);
 // Come back up doing whatever we were doing. A deploy, a reboot or a crash otherwise leaves every
