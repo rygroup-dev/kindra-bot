@@ -62,7 +62,8 @@ fi
 
 command -v node >/dev/null 2>&1 || die "Node.js is required — https://nodejs.org"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-[ "$NODE_MAJOR" -ge 18 ] || die "Node $NODE_MAJOR is too old — Kindra Bot needs 18 or newer."
+# Node 18 reached end of life in April 2025 — no more security fixes. The bot holds wallet keys.
+[ "$NODE_MAJOR" -ge 20 ] || die "Node $NODE_MAJOR is too old — Kindra Bot needs 20 or newer (18 is end-of-life)."
 ok "✓ node $(node -v), git $(git --version | awk '{print $3}')"
 
 # ---------------------------------------------------------------------- source
