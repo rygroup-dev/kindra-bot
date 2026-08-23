@@ -74,5 +74,22 @@ console.log('\nwhose turn it is:');
   ok(f2.byFairness(mixed).map((b) => b.label).join() === 'kindra-1,kindra-2,kindra-10', 'sorts by number, not by text');
 }
 
+console.log('\nthe circuit survives a restart:');
+{
+  const f3 = new Fleet({ onLog: () => {} });
+  f3.saveRunState = () => {};
+  f3.bots = new Map(bots.map((b) => [b.label, b]));
+  f3._shiftCursor = 14;              // mid-lap, as resume() restores it from disk
+  f3.startShifts({ everyMs: 1e9, checkEveryMs: 1e9 });
+  clearInterval(f3._shiftTimer);
+  ok(f3._shiftCursor === 14, 'startShifts keeps a restored cursor instead of zeroing it');
+  const f4 = new Fleet({ onLog: () => {} });
+  f4.saveRunState = () => {};
+  f4.bots = new Map(bots.map((b) => [b.label, b]));
+  f4.startShifts({ everyMs: 1e9, checkEveryMs: 1e9 });
+  clearInterval(f4._shiftTimer);
+  ok(f4._shiftCursor === 0, 'and a first-ever start still begins at wallet 1');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
