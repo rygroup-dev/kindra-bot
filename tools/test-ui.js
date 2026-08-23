@@ -54,6 +54,8 @@ function hydrate(bot) {
   bot.orch.current = 'gather:woodcutting';
   bot.orch.cycle = 17;
   bot.status = 'running';
+  // A called raid, so the boss panel renders its raid branch rather than the join-someone-else one.
+  bot.bosses.raid = { bossId: 'drowned_king', members: [bot.label], pay: 60, secs: 19, go: false, at: Date.now() };
   bot.net.ready = true;     // makes bot.live true, which is what the panels branch on
   bot.referral.status = { pending: 3, converted: 1, claimable: 200 };
   bot.garden.plots.set(0, { id: 0, seed: 'sunflower_seed', plantedAt: Date.now() - 800_000, owner: 'Dainfield' });

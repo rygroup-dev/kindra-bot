@@ -10,7 +10,7 @@
     "auto": "node tools/orchestrator.js",
     "rules": "node tools/fetch-rules.js",
     "prestart": "node tools/fetch-rules.js --if-missing || true",
-    "test": "node tools/test-ui.js"
+    "test": "node tools/test-ui.js && node tools/test-raid.js && node tools/test-muster.js"
   },
   "license": "MIT",
   "engines": {
