@@ -46,13 +46,13 @@ const BOOK = [
 
 console.log('\nthe reserve is one flat number for the whole fleet');
 {
-  ok(CFG.goldReserve === 1200, `default reserve is 1,200 gold (got ${CFG.goldReserve})`);
+  ok(CFG.goldReserve === 300, `default reserve is 300 gold (got ${CFG.goldReserve})`);
   ok(CFG.cashOutLot === 1000, `default lot is 1,000 gold (got ${CFG.cashOutLot})`);
   ok(CFG.cashOutLot >= KGOLD.MIN_GOLD, 'the lot is at least the book minimum, so it is always a legal listing');
 
   // The old float. Kept as an explicit assertion because it is the bug: 1,000 + 6,000 = 7,000 gold
   // banked before a first listing.
-  ok(CFG.goldReserve + KGOLD.MIN_GOLD < 6000,
+  ok(CFG.goldReserve + KGOLD.MIN_GOLD < 2000,
      `a character can list its first lot at ${CFG.goldReserve + KGOLD.MIN_GOLD} gold, not ~7,000`);
 
   const fresh = wire({ gold: 0 }).kg;      // stands in for a wallet minted tomorrow
@@ -61,17 +61,20 @@ console.log('\nthe reserve is one flat number for the whole fleet');
      'a brand-new character and a rich old one keep the same reserve — no per-wallet copy to migrate');
 }
 
-console.log('\nit lists at 1,200 + one lot, and not before');
+console.log('\nit lists at the reserve + one lot, and not before');
 {
-  const under = wire({ gold: 2199, book: BOOK });
+  const trigger = CFG.goldReserve + KGOLD.MIN_GOLD;      // 1,300 at the default reserve
+
+  const under = wire({ gold: trigger - 1, book: BOOK });
   under.kg.refresh = async () => BOOK;
   const r1 = await under.kg.cashOutSurplus();
-  ok(!r1.listed && /below 1000/.test(r1.reason), `2,199 gold: nothing listed (${r1.reason})`);
+  ok(!r1.listed && /below 1000/.test(r1.reason), `${trigger - 1} gold: nothing listed (${r1.reason})`);
 
-  const over = wire({ gold: 2200, book: BOOK });
+  const over = wire({ gold: trigger, book: BOOK });
   over.kg.refresh = async () => BOOK;
   const r2 = await over.kg.cashOutSurplus();
-  ok(r2.listed && r2.gold === 1000, `2,200 gold: lists exactly one 1,000g lot (got ${r2.gold})`);
+  ok(r2.listed && r2.gold === 1000, `${trigger} gold: lists exactly one 1,000g lot (got ${r2.gold})`);
+  ok(trigger - r2.gold === CFG.goldReserve, `and leaves exactly the reserve behind (${trigger - r2.gold}g)`);
   ok(over.sent.some((m) => m.t === 'kgoldList' && m.gold === 1000), 'the kgoldList frame carries the lot');
 }
 

@@ -176,7 +176,7 @@ Everything lives in `.env` (see `.env.example`). The useful knobs:
 | `KINDRA_AUTOSTART` | `0` | start farming when the service comes up |
 | `KINDRA_MAX_PER_IP` | `3` | the server's own limit; lower it if you like |
 | `KINDRA_GAS_TOPUP` | `0.001` | ETH sent per wallet by ⛽ Fund gas |
-| `KINDRA_GOLD_RESERVE` | `1200` | gold each character keeps; the rest is listed for $KINDRA |
+| `KINDRA_GOLD_RESERVE` | `300` | gold each character keeps; the rest is listed for $KINDRA |
 | `KINDRA_CASHOUT_LOT` | `1000` | size of each auto cash-out lot (the book's minimum) |
 
 ## Safety
