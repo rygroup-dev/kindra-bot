@@ -66,6 +66,23 @@ function wire(b) {
     if (tag === 'econ' && /vendor: /.test(rest)) {
       notify(`sold:${b.label}`, `${E.sell} *${who()}* ${esc(rest)}`, { minGapMs: 900000 });
     }
+    // WHAT WENT UP AND WHAT CAME BACK. A listing puts goods into escrow — they leave the satchel
+    // whether or not anyone buys them — so both halves are worth seeing. The listing side is the
+    // per-trip summary (one line, not one per stack); the sale side is the `sales` feed, which is
+    // the only confirmation a listing ever turned into gold.
+    if (tag === 'econ' && /^market: listed/.test(rest)) {
+      notify(`list:${b.label}`, `${E.sell} *${who()}* ${esc(rest)}`, { minGapMs: 120000 });
+    }
+    if (tag === 'econ' && /^market sale cleared/.test(rest)) {
+      notify(`clear:${b.label}:${rest.slice(0, 40)}`, `💰 *${who()}* SOLD — ${esc(rest.replace(/^market sale cleared: /, ''))}`, { minGapMs: 0 });
+    }
+    // The cash-out, both directions: gold listed for real $KINDRA, and a lot that actually sold.
+    if (tag === 'kgold' && /^listed /.test(rest)) {
+      notify(`kglist:${b.label}`, `${E.token} *${who()}* listed ${esc(rest.replace(/^listed /, ''))}`, { minGapMs: 0 });
+    }
+    if (tag === 'kgold' && /^SOLD /.test(rest)) {
+      notify(`kgsold:${b.label}:${rest.slice(0, 40)}`, `${E.token}💰 *${who()}* SOLD ${esc(rest.replace(/^SOLD /, ''))}`, { minGapMs: 0 });
+    }
     if (tag === 'orch' && /account Lv \d+ reached/.test(rest)) {
       notify(`gate:${b.label}`, `🎯 *${who()}* ${esc(rest)}`, { minGapMs: 0 });
     }
