@@ -10,6 +10,7 @@
 // What has to hold: a ban is recognised from the server's own words, it is written down so a
 // restart does not undo it, it is filtered out of the ONE function that hands out slots, and it
 // expires by itself so a temporary ban is not a permanent deletion.
+import fsSrc from 'node:fs';
 import { ensureRules } from '../lib/preflight.js';
 ensureRules();
 const { Fleet } = await import('../lib/fleet.js');
@@ -75,17 +76,22 @@ const fresh = f2.add({ label: 'y', privateKey: '0x' + '22'.repeat(32), world: 'v
 ok(fresh.banned === null, 'an ordinary entry is untouched');
 ok(f2.playable(fresh), 'and plays normally');
 
-console.log('\nno referral is ever attributed automatically:');
-const { DEFAULT_REFERRER } = await import('../lib/config.js');
-ok(DEFAULT_REFERRER === '', 'there is no built-in referrer — the ban came from crediting one');
-ok(f2.bestReferrer() === null, 'and the fleet never nominates one of its own characters');
+console.log('\nno referral exists to be attributed:');
+const cfg = await import('../lib/config.js');
+ok(cfg.DEFAULT_REFERRER === undefined, 'there is no referrer setting left to point at anything');
+ok(typeof f2.bestReferrer !== 'function', 'and no code path that nominates one');
 const made = [];
 const origSave = Fleet.saveWallets;
 Fleet.saveWallets = (l) => { made.push(...l.slice(-1)); return ''; };
 Fleet.loadWallets = () => [];
 Fleet.createWallets(1, { world: 'valley' });
 Fleet.saveWallets = origSave;
-ok(made[0]?.referrer === null, 'a freshly minted character carries no referrer at all');
+ok(made[0] && !('referrer' in made[0]), 'a freshly minted character has no referrer field at all');
+// The join frame is where it would actually be sent, so assert on the source rather than trusting
+// that removing the field was enough.
+const src = fsSrc.readFileSync(new URL('../lib/bot.js', import.meta.url), 'utf8');
+ok(!/ref:\s*this\.referrer/.test(src), 'and the join frame carries no `ref`');
+ok(!/referral\.js/.test(src), 'the referral module is gone from the bot entirely');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

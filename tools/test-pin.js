@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // test-pin.js — a pinned character holds its slot, and lets go by itself.
 //
-// The pin exists for one job: dragging an account to Lv 10, which is what unlocks referrals for
-// every character the fleet has minted. The two things that can go wrong with it are that rotation
-// evicts it anyway, and that it never releases — so both are asserted here.
+// The pin exists for one job: dragging an account to Lv 10, which is what opens the last two realm
+// portals. The two things that can go wrong with it are that rotation evicts it anyway, and that it
+// never releases — so both are asserted here.
 import { ensureRules } from '../lib/preflight.js';
 ensureRules();
 const { Fleet } = await import('../lib/fleet.js');
@@ -51,7 +51,7 @@ bots[0].state.me.tl = REFERRAL.minLv;
 ok(fleet.releasePinIfDone() === true, `releases the moment it reaches Lv ${REFERRAL.minLv}`);
 ok(fleet.pinned === null, 'the pin is gone');
 ok(bots[0].orch.chaseAccountLevel === false, 'and the chase is switched back off');
-ok(logs.some((m) => /referrals are open/.test(m)), 'and it says why');
+ok(logs.some((m) => /reached account Lv 10/.test(m)), 'and it says why');
 
 console.log('\nby hand:');
 fleet.pin('kindra-02');

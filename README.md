@@ -54,7 +54,7 @@ What it does instead:
   breaks and occasional long ones, and joins are staggered.
 - **Looks like a person, not a row in a spreadsheet.** Character names, appearance and device
   profile are all derived from the wallet and stay stable for that character's life. Your fleet is
-  `Dainfield` and `Rookmere`, never `bot-01` and `bot-02`.
+  `Loamreed` and `Bryn398`, never `bot-01` and `bot-02`.
 - **Routes through proxies when you want it to** — one exit IP per account, set per-wallet.
 
 ## What the bot understands about the game
@@ -107,7 +107,7 @@ they cannot drift apart (`npm test` asserts it).
 | **Activities** | `/boss` `/jobs` `/garden` `/upgrades` |
 | **Actions** | `/sell` `/cook` `/food n` `/spin` `/claim` `/tend` |
 | **Wallets** | `/wallets` — balances, primary, gas top-up, sweep |
-| **On-chain** | `/kgold` `/cashout keep` `/referral` |
+| **On-chain** | `/kgold` `/cashout keep` |
 
 Add an account name to target one: `/bag kindra-02`.
 
@@ -126,25 +126,24 @@ The `/wallets` panel gives you:
 Cashing out is `/cashout`: it lists your surplus gold on the in-game book just under the best live
 ask so it actually clears, and the buyer's wallet pays yours in real ERC-20 **$KINDRA** directly.
 
-### Referrals — off, and here is why
+### No referrals — and why the code refuses to add them
 
 Kindra pays a referrer **500 gold + 200 on-chain $KINDRA** for every character that joins through
-them and reaches account Lv 5. It looks like the best income a fleet has. It is a trap.
+them and reaches account Lv 5. It is the best-looking income a fleet has. It is a trap.
 
 This project tried it: one character was pushed to the Lv-10 referring gate and every new wallet was
 minted naming it. Eleven of them reached Lv 5 and converted. Within hours **all eleven were banned
-for a year — and so was the referrer that collected.** Referral payouts are visible to the operator,
-and a cluster of accounts referring one of their own from a single IP is the most legible abuse
-pattern in the game.
+for a year — and so was the character that collected.** Referral payouts are visible to the operator,
+and a cluster of accounts crediting one of their own from a single connection is the most legible
+abuse pattern in the game.
 
-So this build ships with **no referrer at all**. Nothing is stamped on a new character, no character
-is pushed towards Lv 10 on its own, and no `ref` is sent. If you have a genuinely separate account on
-a different connection, name it by hand with `KINDRA_REFERRER=<character name>` in `.env`. Pointing
-it at your own fleet will cost you the fleet.
+So there is no referral code left in this bot. No `ref` is sent on any join, new character or old;
+there is no setting that turns it back on; nothing is stamped on a minted wallet. If you want that
+reward, refer real people from real accounts.
 
-An account that does get banned is now recognised from the server's refusal, written into the wallet
-book with its expiry, and dropped from the rotation — so it stops burning one of your three per-IP
-slots on a join that can only be refused.
+An account that does get banned is now recognised from the server's own refusal, written into the
+wallet book with its expiry, and dropped from the rotation and from Telegram — so it stops burning
+one of your three per-IP slots on a join that can only ever be refused.
 
 ## Layout
 
@@ -156,7 +155,7 @@ lib/
   economy.js      vendor vs market        crafting.js   cooking, crafting, potions
   quests.js       dailies and events      garden.js     8 plots that earn while away
   bosses.js       boss assist             jobs.js       the Trade Roads
-  upgrades.js     tools worth buying      referral.js   referral rewards
+  upgrades.js     tools worth buying
   orchestrator.js the brain               fleet.js      many accounts, one process
   chain.js        on-chain reads          treasury.js   primary, gas, sweep
   stealth.js      timing and identity     panels.js     the Telegram dashboard
@@ -176,7 +175,6 @@ Everything lives in `.env` (see `.env.example`). The useful knobs:
 | `KINDRA_WORLD` | `valley` | `valley` (EU) or `us` |
 | `KINDRA_AUTOSTART` | `0` | start farming when the service comes up |
 | `KINDRA_MAX_PER_IP` | `3` | the server's own limit; lower it if you like |
-| `KINDRA_REFERRER` | *(none)* | credit a referrer by name — never one of your own |
 | `KINDRA_GAS_TOPUP` | `0.001` | ETH sent per wallet by ⛽ Fund gas |
 
 ## Safety

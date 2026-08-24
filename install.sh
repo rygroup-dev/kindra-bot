@@ -183,14 +183,11 @@ else
     [ "$HOWMANY" -gt 20 ] && HOWMANY=20
     node --input-type=module -e "
       const { Fleet } = await import('./lib/fleet.js');
-      const { DEFAULT_REFERRER } = await import('./lib/config.js');
-      // No referrer unless you set KINDRA_REFERRER in .env yourself, and do not point it at your
-      // own fleet: referring yourself from one connection is what got twelve of this project's
-      // accounts banned for a year. See the README.
-      const made = Fleet.createWallets(Number(process.argv[1]), { world: process.env.KINDRA_WORLD || 'valley', referrer: DEFAULT_REFERRER || null });
+      // No referrer, ever. Referring your own fleet from one connection is what got twelve of this
+      // project's accounts banned for a year — see the README.
+      const made = Fleet.createWallets(Number(process.argv[1]), { world: process.env.KINDRA_WORLD || 'valley' });
       const all = Fleet.loadWallets(); if (all.length) { all[0].primary = true; Fleet.saveWallets(all); }
       for (const m of made) console.log('   ' + m.label + '  ' + m.address);
-      if (DEFAULT_REFERRER) console.log('   referred by ' + DEFAULT_REFERRER + ' (from KINDRA_REFERRER in .env)');
     " "$HOWMANY"
     ok "✓ $HOWMANY wallet(s) created"
   fi
