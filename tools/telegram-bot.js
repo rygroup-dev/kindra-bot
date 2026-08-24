@@ -88,8 +88,11 @@ function wire(b) {
   b.on('banned', (x) => notify(`ban:${b.label}`,
     `🚫 *${esc(b.label)}* is BANNED for ~${Math.round(x.hours / 24)} days.\nIt has been taken out of the rotation permanently — no slot will be spent on it again.`, { minGapMs: 0 }));
 
+  // Says what happens, not what we wish happened. Measured over 135 deaths: 25 sacks recovered,
+  // 134 corpse runs that ended in a NaN distance. Promising automatic recovery was wrong three
+  // times in four, and a notification that lies is worse than no notification.
   b.state.on('death', () => notify(`death:${b.label}`,
-    `☠️ *${who()}* died — the loot sack will be recovered automatically (it expires in 30 min).`, { minGapMs: 120000 }));
+    `☠️ *${who()}* died — gear and gold are safe, the satchel spilled into a sack that expires in 30 min. A corpse run is attempted; it does not always get there.`, { minGapMs: 120000 }));
 
   // A spent cap means the brain has rotated away from a whole income source.
   b.state.on('haul', (h) => {

@@ -7,6 +7,7 @@ import { ensureRules } from '../lib/preflight.js';
 ensureRules();
 const { Fleet } = await import('../lib/fleet.js');
 const { Bosses } = await import('../lib/bosses.js');
+const { BOSSES } = await import('../lib/rules.js');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? (pass++, console.log('  ✅', m)) : (fail++, console.log('  ❌', m)); };
@@ -31,8 +32,16 @@ console.log('\nchoosing:');
 const three = [raider('a'), raider('b'), raider('c')];
 use(three);
 let r = fleet.chooseRaid();
-ok(r?.bossId === 'drowned_king', `a party of three calls drowned_king (${r?.bossId})`);
+// Frostmaw, not the Drowned King — and that is the ladder working, not a regression. At combat
+// Lv 17 the goal is the Lv-20 gate that opens the Rimewyrm (240g a kill, five-minute respawn).
+// Measured against that goal:
+//     frostmaw      travel  36s + fight 12s =  48s -> 1,800 xp        = 37.4 xp/sec
+//     drowned_king  travel 226s + fight 19s = 245s -> 2,800 xp + 60g  = 11.4 xp/sec
+// The Drowned King pays gold and the Frostmaw pays none, but it lives at (-30, 790) behind the
+// isles portal and the Frostmaw is 126 units from town. Three times the climb rate wins.
+ok(r?.bossId === 'frostmaw', `a party of three takes the fastest rung to the next gate (${r?.bossId})`);
 ok(r.members.length === 3, 'all three are named in it');
+ok(r.unlock > 0, 'and it is priced on the gate it opens, not on the coins it does not pay');
 
 use([raider('a')]);
 ok(fleet.chooseRaid() === null, 'a party of one calls nothing');
@@ -40,8 +49,14 @@ ok(fleet.chooseRaid() === null, 'a party of one calls nothing');
 use([raider('a', { bossCap: 0 }), raider('b', { bossCap: 0 }), raider('c', { bossCap: 0 })]);
 ok(fleet.chooseRaid() === null, 'nothing is called once the boss purse is spent for the day');
 
+// A Lv5 party used to be told to go away: every PAYING boss gates at combat 10 or above, so the
+// scan found nothing and twenty accounts sat between Lv 1 and 8 with no route out. The Grove Warden
+// gates at combat 0, is 900 hp, and respawns every 2.5 minutes — four kills is combat Lv 12, which
+// is the first paying boss. It is the bottom rung and it was invisible.
 use([raider('a', { lvl: 5 }), raider('b', { lvl: 5 }), raider('c', { lvl: 5 })]);
-ok(fleet.chooseRaid() === null, 'a Lv5 party is under drowned_king\'s Lv12 gate');
+const low = fleet.chooseRaid();
+ok(low?.bossId === 'warden', `a Lv5 party is sent to the Grove Warden, the only rung it can stand on (${low?.bossId})`);
+ok(low.pay === 0 && low.unlock > 0, 'which pays no gold at all — its whole value is the gate it opens');
 
 console.log('\nmustering:');
 const party = [raider('a'), raider('b'), raider('c')];
@@ -71,9 +86,20 @@ const outsider = raider('z', { rations: 0 });   // no rations: it cannot be part
 use([...fresh, outsider]);
 const r2 = fleet.syncRaid();
 ok(!!r2, 'the raid still goes ahead');
-ok(!r2.members.includes('z'), 'the character with no rations is left out of the party');
-ok(r2.members.length === 3, 'the other three still go');
-ok(outsider.bosses.raid === null, 'and it is not handed the raid');
+// Exclusion is a property of the FIGHT, not of the character: with four swinging, the Frostmaw's
+// 1,800 hp falls in nine seconds and even someone carrying no food eats too few slams to be in
+// danger, so crewFor rightly keeps them. Assert the mechanism on a fight long enough to need it —
+// the Drowned King is 2,800 hp and the ration-less raider does not survive it.
+ok(r2.members.length >= 3, 'and the party is not thinned for no reason');
+const longFight = fresh[0].bosses.crewFor(BOSSES.drowned_king, [...fresh, outsider]);
+ok(longFight && !longFight.crew.includes(outsider), 'on a fight long enough to matter, the character with no rations is left out');
+ok(longFight.crew.length === 3, 'and the other three still go');
+// The invariant that actually matters: whoever is not in the party is not holding a raid object.
+// (On this short fight the ration-less raider IS in the party, so asserting on that character by
+// name would be asserting the boss choice again, not the wiring.)
+const members = new Set(r2.members);
+const bystanders = [...fleet.bots.values()].filter((b) => !members.has(b.label));
+ok(bystanders.every((b) => b.bosses.raid === null), 'nobody outside the party is handed the raid');
 
 // One character under the level gate must not ground the raid either.
 const under = raider('y', { lvl: 5 });
