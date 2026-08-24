@@ -11,7 +11,7 @@
     "rules": "node tools/fetch-rules.js",
     "prestart": "node tools/fetch-rules.js --if-missing || true",
     "pretest": "node tools/fetch-rules.js --if-missing || true",
-    "test": "node tools/test-ui.js && node tools/test-frames.js && node tools/test-raid.js && node tools/test-muster.js && node tools/test-pin.js && node tools/test-mode.js && node tools/test-gold-gain.js && node tools/test-ban.js"
+    "test": "node tools/test-ui.js && node tools/test-frames.js && node tools/test-raid.js && node tools/test-muster.js && node tools/test-pin.js && node tools/test-mode.js && node tools/test-gold-gain.js && node tools/test-ban.js && node tools/test-market.js"
   },
   "license": "MIT",
   "engines": {
