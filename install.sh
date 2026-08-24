@@ -184,13 +184,13 @@ else
     node --input-type=module -e "
       const { Fleet } = await import('./lib/fleet.js');
       const { DEFAULT_REFERRER } = await import('./lib/config.js');
-      // A fresh install has no character at the Lv-10 referring threshold, so without this the
-      // 500g + 200 \$KINDRA a conversion pays would go to nobody at all. Change or clear it with
-      // KINDRA_REFERRER in .env — see the README.
+      // No referrer unless you set KINDRA_REFERRER in .env yourself, and do not point it at your
+      // own fleet: referring yourself from one connection is what got twelve of this project's
+      // accounts banned for a year. See the README.
       const made = Fleet.createWallets(Number(process.argv[1]), { world: process.env.KINDRA_WORLD || 'valley', referrer: DEFAULT_REFERRER || null });
       const all = Fleet.loadWallets(); if (all.length) { all[0].primary = true; Fleet.saveWallets(all); }
       for (const m of made) console.log('   ' + m.label + '  ' + m.address);
-      if (DEFAULT_REFERRER) console.log('   referred by ' + DEFAULT_REFERRER + ' (override with KINDRA_REFERRER in .env)');
+      if (DEFAULT_REFERRER) console.log('   referred by ' + DEFAULT_REFERRER + ' (from KINDRA_REFERRER in .env)');
     " "$HOWMANY"
     ok "✓ $HOWMANY wallet(s) created"
   fi

@@ -126,16 +126,25 @@ The `/wallets` panel gives you:
 Cashing out is `/cashout`: it lists your surplus gold on the in-game book just under the best live
 ask so it actually clears, and the buyer's wallet pays yours in real ERC-20 **$KINDRA** directly.
 
-### Referrals
+### Referrals — off, and here is why
 
 Kindra pays a referrer **500 gold + 200 on-chain $KINDRA** for every character that joins through
-them and reaches account Lv 5, and gives the newcomer 250 gold. New characters are minted through
-your own fleet's most advanced character once one qualifies.
+them and reaches account Lv 5. It looks like the best income a fleet has. It is a trap.
 
-Until then this build credits its own character, because a fresh install has nobody at the
-qualifying level and an unattributed join pays the reward to *nobody at all*. It is a plain constant
-in `lib/config.js` — set `KINDRA_REFERRER=<character name>` in `.env` to point it at your own, or
-`KINDRA_REFERRER=` to switch it off entirely.
+This project tried it: one character was pushed to the Lv-10 referring gate and every new wallet was
+minted naming it. Eleven of them reached Lv 5 and converted. Within hours **all eleven were banned
+for a year — and so was the referrer that collected.** Referral payouts are visible to the operator,
+and a cluster of accounts referring one of their own from a single IP is the most legible abuse
+pattern in the game.
+
+So this build ships with **no referrer at all**. Nothing is stamped on a new character, no character
+is pushed towards Lv 10 on its own, and no `ref` is sent. If you have a genuinely separate account on
+a different connection, name it by hand with `KINDRA_REFERRER=<character name>` in `.env`. Pointing
+it at your own fleet will cost you the fleet.
+
+An account that does get banned is now recognised from the server's refusal, written into the wallet
+book with its expiry, and dropped from the rotation — so it stops burning one of your three per-IP
+slots on a join that can only be refused.
 
 ## Layout
 
@@ -167,7 +176,7 @@ Everything lives in `.env` (see `.env.example`). The useful knobs:
 | `KINDRA_WORLD` | `valley` | `valley` (EU) or `us` |
 | `KINDRA_AUTOSTART` | `0` | start farming when the service comes up |
 | `KINDRA_MAX_PER_IP` | `3` | the server's own limit; lower it if you like |
-| `KINDRA_REFERRER` | *(this build's)* | referral attribution for new characters |
+| `KINDRA_REFERRER` | *(none)* | credit a referrer by name — never one of your own |
 | `KINDRA_GAS_TOPUP` | `0.001` | ETH sent per wallet by ⛽ Fund gas |
 
 ## Safety

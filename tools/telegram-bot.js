@@ -15,12 +15,7 @@ const { CFG } = await import('../lib/config.js');
 const { Fleet } = await import('../lib/fleet.js');
 const { Telegram } = await import('../lib/telegram.js');
 const { buildRoutes } = await import('../lib/panels.js');
-const { E, SKILL_ICON, esc, statusDot, activityLabel } = await import('../lib/ui.js');
-// Not imported from lib/rules.js on purpose: static imports are hoisted above ensureRules(), so
-// pulling the rule table in here would bypass the preflight and fail with ERR_MODULE_NOT_FOUND
-// instead of the instructions. It is a stable game constant.
-const REFERRAL_MIN_LV = 10;
-
+const { E, esc, statusDot, activityLabel } = await import('../lib/ui.js');
 if (!CFG.telegramToken) {
   console.error('TELEGRAM_BOT_TOKEN is not set — put it in .env (get one from @BotFather).');
   process.exit(1);
@@ -77,32 +72,24 @@ function wire(b) {
     if (tag === 'quest' && /LEVELUP/.test(rest)) return;   // covered by the milestone handler
   });
 
-  // Skill milestones only — every level would be constant noise at low levels.
-  b.on('levelup', (m) => {
-    if (!m?.skill || !m.level) return;
-    if (m.level % 10 !== 0 && m.level < 5) return;
-    if (m.level % 5 !== 0) return;
-    notify(`lvl:${b.label}:${m.skill}:${m.level}`,
-      `${SKILL_ICON[m.skill] || E.up} *${who()}* — ${esc(m.skill)} **Lv ${m.level}**`, { minGapMs: 0 });
+  // Skill level-ups are deliberately NOT announced. Fifty characters levelling eleven skills each
+  // is a message every few seconds, and a chat that never stops is a chat nobody reads — the one
+  // notification that mattered gets buried under "foraging Lv 12". The panel shows every level on
+  // demand; nothing here needs to interrupt.
+
+  b.on('rejected', (m) => {
+    if (b.banned) return;   // the ban handler below says it properly, once, and says what it means
+    notify(`reject:${b.label}`,
+      `${E.dead} *${esc(b.label)}* was refused entry\n${esc(m?.reason || JSON.stringify(m))}`, { minGapMs: 300000 });
   });
 
-  b.on('rejected', (m) => notify(`reject:${b.label}`,
-    `${E.dead} *${esc(b.label)}* was refused entry\n${esc(m?.reason || JSON.stringify(m))}`, { minGapMs: 300000 }));
+  // The one notification worth keeping loud. An account is gone for about a year, the fleet is
+  // permanently one character smaller, and nothing else in the chat would ever tell you.
+  b.on('banned', (x) => notify(`ban:${b.label}`,
+    `🚫 *${esc(b.label)}* is BANNED for ~${Math.round(x.hours / 24)} days.\nIt has been taken out of the rotation permanently — no slot will be spent on it again.`, { minGapMs: 0 }));
 
   b.state.on('death', () => notify(`death:${b.label}`,
     `☠️ *${who()}* died — the loot sack will be recovered automatically (it expires in 30 min).`, { minGapMs: 120000 }));
-
-  // Account level gates the referral reward, so crossing Lv 10 is genuinely worth knowing.
-  let lastTl = 0;
-  b.state.on('inv', () => {
-    const tl = b.state.me?.tl || 0;
-    if (tl > lastTl) {
-      lastTl = tl;
-      if (tl === REFERRAL_MIN_LV) {
-        notify(`ref:${b.label}`, `🤝 *${who()}* reached account Lv ${tl} — this character can now refer new ones (500g + 200 $KINDRA each).`, { minGapMs: 0 });
-      }
-    }
-  });
 
   // A spent cap means the brain has rotated away from a whole income source.
   b.state.on('haul', (h) => {
@@ -120,9 +107,10 @@ function wire(b) {
   b.net.on('bossSpoils', () => notify(`spoils:${b.label}`,
     `${E.boss} *${who()}* took a share of boss spoils.`, { minGapMs: 120000 }));
 
-  // Something is wrong and farming has stopped.
-  b.net.on('closed', () => notify(`off:${b.label}`,
-    `${E.off} *${esc(b.label)}* went offline.`, { minGapMs: 600000 }));
+  // A closed socket is NOT announced. Rotation disconnects characters every shift by design, so
+  // "went offline" fired on healthy behaviour and said nothing about a real fault. What a genuine
+  // fault looks like is a refused join, which is reported just above, and a flat gold line in the
+  // pulse digest.
 }
 for (const b of fleet.bots.values()) wire(b);
 const origAdd = fleet.add.bind(fleet);
