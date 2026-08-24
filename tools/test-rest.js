@@ -54,5 +54,36 @@ await jittery.recover({ maxMs: 60000 });
 ok(jittery.retreats === 1, 'half a point of wobble is not treated as damage');
 ok(jittery.state.me.hp >= 90, 'and the rest runs to completion');
 
+
+
+// --- the corpse run -------------------------------------------------------------------------
+// Measured over 45 deaths that ran the fixed movement code: 11 sacks recovered, 0 walks failed,
+// and 34 deaths that produced no sack line AT ALL — the run was never attempted, because
+// `reclaimSacks` was gated on a `sackSpawn` frame that does not reach a character the server has
+// already moved to town. Our own last position depends on no frame.
+const { GameState } = await import('../lib/state.js');
+const { DEATH } = await import('../lib/rules.js');
+
+// A net stub that just remembers the handlers GameState.attach registers.
+function wired() {
+  const h = {};
+  const st = new GameState();
+  st.attach({ on: (t, fn) => { (h[t] = h[t] || []).push(fn); }, send: () => {} });
+  return { st, fire: (t, m) => (h[t] || []).forEach((fn) => fn(m)) };
+}
+
+console.log('\nremembering where we fell:');
+const a = wired();
+a.fire('init', { you: { id: 1, x: 40, z: -12, hp: 100, skills: {}, haul: {} }, world: {}, sacks: [] });
+ok(a.st.deathSpot === null, 'a healthy character has no death spot');
+a.fire('ko', { id: 1 });
+ok(a.st.deathSpot?.x === 40 && a.st.deathSpot?.z === -12, 'the spot comes from our own position, not from a frame that may never arrive');
+
+console.log('\nseeding sacks from init:');
+const b = wired();
+b.fire('init', { you: { id: 1, x: 0, z: 0, skills: {}, haul: {} }, world: {}, sacks: [{ id: 7, x: 40, z: -12 }] });
+ok(b.st.sacks.get(7)?.x === 40, 'a sack still lying there when we rejoin is read out of init, not dropped');
+ok(DEATH.sackTtlMs === 30 * 60000, 'and the 30-minute window is what bounds the attempt');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
